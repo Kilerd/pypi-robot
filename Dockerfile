@@ -1,28 +1,11 @@
 FROM clux/muslrust:nightly-2019-12-21 as builder
 
 WORKDIR /app
-
-RUN USER=root cargo new pypirobot
-WORKDIR /app/pypirobot
-
-COPY --from=rust /app/Cargo.toml ./
-COPY --from=rust /app/Cargo.lock ./
-
-RUN echo 'fn main() { println!("Dummy") }' > ./src/main.rs
-
+COPY . /app
 RUN cargo build --release
-
-RUN rm -r target/x86_64-unknown-linux-musl/release/.fingerprint/pypirobot-*
-
-COPY --from=rust /app/src src/
-COPY --from=rust /app/templates templates/
-
-RUN cargo build --release --frozen --bin pypirobot
-
-
 FROM alpine:latest
 
-COPY --from=builder /app/pypirobot/target/x86_64-unknown-linux-musl/release/pypirobot /application/pypirobot
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/pypirobot /application/pypirobot
 
 EXPOSE 8000
 

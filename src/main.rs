@@ -146,7 +146,7 @@ async fn telegram_webhook_handler(
             .body_string()
             .await
             .unwrap();
-            debug!(
+            info!(
                 "send inline query answer, query={} answer={}",
                 msg.query, string1
             );
