@@ -7,15 +7,20 @@ use actix_web::{
     error, guard, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
     Result,
 };
+use telegram_typing_bot::typing::UpdateMessage;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-    "hello world"
+#[post("/telegram")]
+async fn hello(update: web::Json<telegram_typing_bot::typing::Update>) -> impl Responder {
+    match &update.message {
+        UpdateMessage::InlineQuery(msg) => {}
+        _ => {}
+    };
+    "OK"
 }
 
 #[actix_rt::main]
 async fn main() -> io::Result<()> {
-    env::set_var("RUST_LOG", "actix_web=debug;actix_server=info");
+    env::set_var("RUST_LOG", "pypirobot=debug");
     env_logger::init();
 
     HttpServer::new(|| {
