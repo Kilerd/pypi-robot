@@ -33,7 +33,6 @@ impl Package {
             .find(Class("package-snippet"))
             .into_iter()
             .map(|node| {
-                dbg!(&node);
                 let name = node
                     .find(Class("package-snippet__name"))
                     .next()
