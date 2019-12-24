@@ -1,21 +1,30 @@
-use actix_web::{App, get, HttpServer, Responder, web, HttpResponse};
+#[macro_use]
+extern crate actix_web;
+
+use std::{env, io};
+
+use actix_web::{
+    error, guard, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+    Result,
+};
 
 #[get("/")]
-fn index() -> impl Responder {
-    format!("Hello world")
+async fn hello() -> impl Responder {
+    "hello world"
 }
 
-fn main() -> std::io::Result<()> {
-//    let sys = actix_rt::System::new("example");  // <- create Actix runtime
+#[actix_rt::main]
+async fn main() -> io::Result<()> {
+    env::set_var("RUST_LOG", "actix_web=debug;actix_server=info");
+    env_logger::init();
 
-    HttpServer::new(
-        || App::new()
-            .service(index)
-
-    )
-        .bind("0.0.0.0:59090")?
-        .run()
-
-//    actix_rt::System::current().stop();
-//    sys.run()
+    HttpServer::new(|| {
+        App::new()
+            // enable logger - always register actix-web Logger middleware last
+            .wrap(middleware::Logger::default())
+            .service(hello)
+    })
+    .bind("0.0.0.0:8080")?
+    .start()
+    .await
 }
