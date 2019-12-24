@@ -4,8 +4,6 @@ extern crate actix_web;
 extern crate log;
 
 use serde::{Deserialize, Serialize};
-use unhtml::{self, FromHtml};
-use unhtml_derive::FromHtml;
 
 use std::{env, io};
 
@@ -17,23 +15,50 @@ use serde_with::skip_serializing_none;
 use telegram_typing_bot::typing::{InlineKeyboardMarkup, ParseMode, UpdateMessage};
 
 use once_cell::sync::Lazy;
+use select::document::Document;
+use select::predicate::Class;
 
 #[skip_serializing_none]
-#[derive(FromHtml, Debug)]
+#[derive(Debug)]
 struct Package {
-    #[html(selector = "span.package-snippet__name", attr = "inner")]
     name: String,
-    #[html(selector = "span.package-snippet__version", attr = "inner")]
     version: String,
-    #[html(selector = "p.package-snippet__description", attr = "inner")]
     description: String,
 }
 
-#[skip_serializing_none]
-#[derive(FromHtml, Debug)]
-struct PypiSearchResult {
-    #[html(selector = "a.package-snippet")]
-    pub packages: Vec<Package>,
+impl Package {
+    fn parser_from_html(content: &str) -> Vec<Package> {
+        let document1 = Document::from(content);
+        document1
+            .find(Class("package-snippet"))
+            .into_iter()
+            .map(|node| {
+                dbg!(&node);
+                let name = node
+                    .find(Class("package-snippet__name"))
+                    .next()
+                    .unwrap()
+                    .text();
+
+                let version = node
+                    .find(Class("package-snippet__version"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let description = node
+                    .find(Class("package-snippet__description"))
+                    .next()
+                    .unwrap()
+                    .text();
+
+                Package {
+                    name,
+                    version,
+                    description,
+                }
+            })
+            .collect()
+    }
 }
 
 #[skip_serializing_none]
@@ -98,10 +123,9 @@ async fn telegram_webhook_handler(
                 .body_string()
                 .await
                 .unwrap();
-            let result: PypiSearchResult = PypiSearchResult::from_html(&string).unwrap();
+            let packages = Package::parser_from_html(&string);
 
-            let x: Vec<InlineQueryResult> = result
-                .packages
+            let x: Vec<InlineQueryResult> = packages
                 .iter()
                 .map(|package| {
                     InlineQueryResult::InlineQueryResultArticle(InlineQueryResultArticle {
@@ -173,4 +197,54 @@ async fn main() -> io::Result<()> {
     .bind("0.0.0.0:8000")?
     .start()
     .await
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Package;
+    use select::predicate::{Attr, Class, Name, Predicate};
+
+    #[test]
+    fn test_html_selector() {
+        use select::document::Document;
+        let content = include_str!("pypi_search_result.html");
+        let document1 = Document::from(content);
+        let packages: Vec<Package> = document1
+            .find(Class("package-snippet"))
+            .into_iter()
+            .map(|node| {
+                dbg!(&node);
+                let name = node
+                    .find(Class("package-snippet__name"))
+                    .next()
+                    .unwrap()
+                    .text();
+
+                let version = node
+                    .find(Class("package-snippet__version"))
+                    .next()
+                    .unwrap()
+                    .text();
+                let description = node
+                    .find(Class("package-snippet__description"))
+                    .next()
+                    .unwrap()
+                    .text();
+
+                Package {
+                    name,
+                    version,
+                    description,
+                }
+            })
+            .collect();
+
+        assert_eq!(20, packages.len());
+        assert_eq!("Flask", packages[0].name);
+        assert_eq!("1.1.1", packages[0].version);
+        assert_eq!(
+            "A simple framework for building complex web applications.",
+            packages[0].description
+        );
+    }
 }

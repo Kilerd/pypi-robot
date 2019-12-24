@@ -1,4 +1,4 @@
-FROM clux/muslrust:nightly-2019-12-21 as builder
+FROM clux/muslrust:stable as builder
 
 WORKDIR /app
 COPY . /app
@@ -9,12 +9,9 @@ COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/pypirobot /app
 
 EXPOSE 8000
 
-ENV DATABASE_URL postgres://root@postgres/resource
-ENV TELEGRAM_BOT_SECRET_KEY TELEGRAM_BOT_SECRET_KEY
-ENV TELEGRAM_WHITE_LIST TELEGRAM_WHITE_LIST
-
 WORKDIR /application
 
+ENV TELEGRAM_BOT_TOKEN TELEGRAM_WHITE_LIST
 ENV RUST_LOG pypirobot=INFO
 
 CMD ["./pypirobot"]
